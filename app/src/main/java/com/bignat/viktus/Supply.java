@@ -1,6 +1,8 @@
 package com.bignat.viktus;
 
-public class Supply {
+import java.io.Serializable;
+
+public class Supply implements Serializable {
     public String name;
     public double quantity;
     public Unit unit;

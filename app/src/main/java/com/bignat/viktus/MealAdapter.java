@@ -1,8 +1,10 @@
 package com.bignat.viktus;
 
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,17 +14,31 @@ import java.util.List;
 
 public class MealAdapter extends RecyclerView.Adapter<MealAdapter.ViewHolder> {
 
-    private final List<String> meals;
+    private final List<Meal> meals;
 
-    public MealAdapter(List<String> meals) {
+    public interface OnItemClickListener {
+        void onItemClick(Meal meal, int position);
+    }
+
+    private OnItemClickListener clickListener;
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.clickListener = listener;
+    }
+
+    public MealAdapter(List<Meal> meals) {
         this.meals = meals;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
+        final View imageCard;
+        final ImageView image;
         final TextView name;
 
         ViewHolder(View itemView) {
             super(itemView);
+            imageCard = itemView.findViewById(R.id.meal_image_card);
+            image = itemView.findViewById(R.id.meal_image);
             name = itemView.findViewById(R.id.meal_name);
         }
     }
@@ -37,7 +53,22 @@ public class MealAdapter extends RecyclerView.Adapter<MealAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.name.setText(meals.get(position));
+        Meal meal = meals.get(position);
+        holder.name.setText(meal.name);
+
+        if (meal.imageUri != null) {
+            holder.imageCard.setVisibility(View.VISIBLE);
+            holder.image.setImageURI(Uri.parse(meal.imageUri));
+        } else {
+            holder.imageCard.setVisibility(View.GONE);
+            holder.image.setImageDrawable(null);   // rows are recycled, clear the old picture
+        }
+        holder.itemView.setOnClickListener(v -> {
+            int pos = holder.getAdapterPosition();
+            if (clickListener != null && pos != RecyclerView.NO_POSITION) {
+                clickListener.onItemClick(meals.get(pos), pos);
+            }
+        });
     }
 
     @Override
@@ -46,13 +77,23 @@ public class MealAdapter extends RecyclerView.Adapter<MealAdapter.ViewHolder> {
     }
 
     public void moveItem(int from, int to) {
-        String meal = meals.remove(from);
+        Meal meal = meals.remove(from);
         meals.add(to, meal);
         notifyItemMoved(from, to);
     }
 
-    public void addMeal(String name) {
-        meals.add(name);
+    public void addMeal(Meal meal) {
+        meals.add(meal);
         notifyItemInserted(meals.size() - 1);
+    }
+
+    public void updateMeal(int position, Meal meal) {
+        meals.set(position, meal);
+        notifyItemChanged(position);
+    }
+
+    public void removeMeal(int position) {
+        meals.remove(position);
+        notifyItemRemoved(position);
     }
 }

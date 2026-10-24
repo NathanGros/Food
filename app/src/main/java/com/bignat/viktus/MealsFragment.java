@@ -33,8 +33,10 @@ public class MealsFragment extends Fragment {
         RecyclerView list = view.findViewById(R.id.meals_list);
         list.setLayoutManager(new LinearLayoutManager(requireContext()));
 
-        List<String> meals = new ArrayList<>(Arrays.asList(
-                "Spaghetti bolognese", "Chicken salad", "Veggie stir-fry"));
+        List<Meal> meals = new ArrayList<>(Arrays.asList(
+                new Meal("Spaghetti bolognese"),
+                new Meal("Cantonese rice"),
+                new Meal("Omelette")));
         adapter = new MealAdapter(meals);
         list.setAdapter(adapter);
 
@@ -59,25 +61,32 @@ public class MealsFragment extends Fragment {
                 });
         helper.attachToRecyclerView(list);
 
-        FloatingActionButton fab = view.findViewById(R.id.fab_add_meal);
-        fab.setOnClickListener(v -> showAddMealDialog());
-    }
+        // Single listener for add, edit, delete and eaten
+        getChildFragmentManager().setFragmentResultListener(
+                MealDialog.RESULT_KEY, getViewLifecycleOwner(), (key, result) -> {
+                    int position = result.getInt(MealDialog.KEY_POSITION);
+                    String action = result.getString(MealDialog.KEY_ACTION);
 
-    private void showAddMealDialog() {
-        EditText input = new EditText(requireContext());
-        input.setHint("Meal name");
-        input.setSingleLine(true);
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Add meal")
-                .setView(input)
-                .setPositiveButton("Add", (dialog, which) -> {
-                    String name = input.getText().toString().trim();
-                    if (!name.isEmpty()) {
-                        adapter.addMeal(name);
+                    if (MealDialog.ACTION_DELETE.equals(action) || MealDialog.ACTION_EATEN.equals(action)) {
+                        adapter.removeMeal(position);
+                        return;
                     }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+
+                    Meal meal = (Meal) result.getSerializable(MealDialog.KEY_MEAL);
+                    if (position == MealDialog.NEW_ITEM) {
+                        adapter.addMeal(meal);
+                    } else {
+                        adapter.updateMeal(position, meal);
+                    }
+                });
+
+        // "+" button: add mode
+        view.findViewById(R.id.fab_add_meal).setOnClickListener(v ->
+                MealDialog.newAdd().show(getChildFragmentManager(), "meal_dialog"));
+
+        // Row tap: view mode
+        adapter.setOnItemClickListener((meal, position) ->
+                MealDialog.newView(position, meal).show(getChildFragmentManager(), "meal_dialog"));
     }
+
 }
